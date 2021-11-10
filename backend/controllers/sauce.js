@@ -6,6 +6,10 @@ exports.createSauce = (req, res, next) => {
   delete sauceObject._id;
   const sauce = new Sauce({
     ...sauceObject,
+    likes: 0,
+    usersLiked:"",
+    dislikes:0,
+    usersDisliked:"",
     imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
   });
   sauce.save()
@@ -46,4 +50,42 @@ exports.deleteSauce = (req, res, next) => {
       });
     })
     .catch(error => res.status(500).json({ error }));
+};
+
+exports.likeDislikeSauce = (req, res, next) => {
+  Sauce.findOne({ _id: req.params.id })
+  .then ( sauce => {
+    switch (req.body.like) {
+      case 1 :
+        if(sauce.usersLiked.indexOf(req.body.userId) == -1) {
+          sauce.updateOne({ $inc: {likes: +1}, $push: {usersLiked: req.body.userId}})
+            .then(() => res.status(201).json({ message : "J'aime !"}))
+            .catch( error => res.status(400).json({ error }));
+        } 
+        break;
+  
+      case -1 : 
+        if(sauce.usersDisliked.indexOf(req.body.userId) == -1) {
+          sauce.updateOne({ $inc: {dislikes: +1}, $push: {usersDisliked: req.body.userId}})
+            .then(() => res.status(201).json({ message : "J'aime !"}))
+            .catch( error => res.status(400).json({ error }));
+        } 
+        break;
+  
+      case 0 :
+        if(sauce.usersLiked.indexOf(req.body.userId) > -1) {
+          sauce.updateOne({ $inc: {likes: -1}, $pull: {usersLiked: req.body.userId}})
+            .then(() => res.status(201).json({ message : "Change d'avis"}))
+            .catch( error => res.status(400).json({ error }));
+        } 
+        else if (sauce.usersDisliked.indexOf(req.body.userId) > -1) {
+          sauce.updateOne({ $inc: {dislikes: -1}, $pull: {usersDisliked: req.body.userId}})
+            .then(() => res.status(201).json({ message : "Change d'avis"}))
+            .catch( error => res.status(400).json({ error }));
+        }
+        break;
+  
+    };
+  })
+  .catch(error => res.status(500).json({ error }));
 };
